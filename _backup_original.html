@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Micro Racing V2.0</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#171717;color:#f2e8c9;font-family:"Courier New",monospace}
+body{min-height:100vh;display:flex;justify-content:center;align-items:center}
+.wrap{width:540px;max-width:96vw;text-align:center}
+h1{margin:0 0 4px;font-size:28px;letter-spacing:5px}
+.version{color:#aaa080;font-size:12px;margin-bottom:12px}
+.panel{border:3px solid #d6c79a;background:#242424;padding:16px}
+canvas{display:block;width:500px;height:650px;max-width:100%;margin:0 auto;border:4px solid #d6c79a;background:#222;image-rendering:pixelated}
+.hud{width:500px;max-width:100%;margin:0 auto 8px;padding:8px 14px;border:2px solid #d6c79a;background:#262626;display:flex;justify-content:space-between;font-size:16px}
+button{font:700 15px "Courier New",monospace;color:#f2e8c9;background:#303030;border:2px solid #aaa080;padding:10px 16px;cursor:pointer}
+button:hover{background:#3b3b3b}
+button.selected{border-color:#f2e8c9;background:#4a4635}
+.car-grid{display:flex;justify-content:center;margin:14px 0}.car-card{width:260px}
+.car-card{padding:10px;border:2px solid #77705a;background:#292929;cursor:pointer;transition:.12s;display:none}.car-card.selected{display:block}
+.car-card:hover{border-color:#d6c79a}
+.car-card.selected{border-color:#eee6bd;background:#3b382c}
+.car-preview{height:95px;display:flex;align-items:center;justify-content:center}
+.car-name{font-size:14px;margin-top:5px}
+.car-desc{font-size:10px;color:#aaa080;margin-top:4px}
+.controls{margin-top:10px;color:#aaa080;font-size:12px;line-height:1.8}
+.hidden{display:none}
+#startBtn{width:100%;margin-top:4px}
+.tip{font-size:12px;color:#aaa080;margin-bottom:8px}
+@media(max-height:850px){body{align-items:flex-start;padding:15px 0}.wrap{transform:scale(.88);transform-origin:top center}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MICRO RACING</h1>
+  <div class="version">V2.3 — SINGLE CAR SELECT</div>
+
+  <section id="menu" class="panel">
+    <div class="tip">SELECT YOUR CAR — ← / → CHANGE &nbsp; ENTER START</div>
+    <div class="car-grid">
+      <div class="car-card selected" data-car="sport">
+        <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="sport"></canvas></div>
+        <div class="car-name">閃電 GT</div>
+        <div class="car-desc">BALANCED</div>
+      </div>
+      <div class="car-card" data-car="formula">
+        <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="formula"></canvas></div>
+        <div class="car-name">獵鷹 F1</div>
+        <div class="car-desc">SLIM & FAST</div>
+      </div>
+      <div class="car-card" data-car="offroad">
+        <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="offroad"></canvas></div>
+        <div class="car-name">荒野王者</div>
+        <div class="car-desc">TOUGH</div>
+      </div>
+      <div class="car-card" data-car="muscle">
+        <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="muscle"></canvas></div>
+        <div class="car-name">赤焰 V8</div>
+        <div class="car-desc">WIDE & POWER</div>
+      </div>
+    </div>
+    <button id="startBtn">▶ START RACE</button>
+  </section>
+
+  <section id="gameScreen" class="hidden">
+    <div class="hud">
+      <div>SCORE: <span id="score">0</span></div>
+      <div>BEST: <span id="best">0</span></div>
+      <div>CAR: <span id="carLabel">閃電 GT</span></div>
+      <div>LV: <span id="speedLevel">1</span></div>
+    </div>
+    <canvas id="game" width="500" height="650"></canvas>
+    <div class="controls">
+      <kbd>←</kbd> <kbd>→</kbd> 移動　／　<kbd>↑</kbd> 加速　／　<kbd>↓</kbd> 減速
+      <br>撞擊後按 <kbd>SPACE</kbd> 重新開始　／　按 <kbd>ESC</kbd> 回選車
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+const menu=document.getElementById("menu");
+const gameScreen=document.getElementById("gameScreen");
+const startBtn=document.getElementById("startBtn");
+const scoreEl=document.getElementById("score");
+const bestEl=document.getElementById("best");
+const carLabelEl=document.getElementById("carLabel");
+const speedLevelEl=document.getElementById("speedLevel");
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const W=500,H=650;
+
+const cars={
+  sport:{name:"閃電 GT",color:"#e0523f",dark:"#8f2f25",type:"sport"},
+  formula:{name:"獵鷹 F1",color:"#4c91d9",dark:"#28527f",type:"formula"},
+  offroad:{name:"荒野王者",color:"#63a85b",dark:"#3d6e38",type:"offroad"},
+  muscle:{name:"赤焰 V8",color:"#c58b32",dark:"#76531e",type:"muscle"}
+};
+let selected="sport";
+
+const carCards=[...document.querySelectorAll(".car-card")];
+
+function updateCarSelection(){
+  carCards.forEach((card,i)=>{
+    card.classList.toggle("selected", card.dataset.car===selected);
+  });
+}
+
+function moveCarSelection(direction){
+  let index=carCards.findIndex(card=>card.dataset.car===selected);
+  if(index<0) index=0;
+  index=(index+direction+carCards.length)%carCards.length;
+  selected=carCards[index].dataset.car;
+  updateCarSelection();
+}
+
+carCards.forEach(card=>{
+  card.addEventListener("click",()=>{
+    selected=card.dataset.car;
+    updateCarSelection();
+  });
+});
+
+updateCarSelection();
+
+function drawCar(g,car,x,y,w,h,scale=1){
+  const c=cars[car];
+  const cx=x+w/2;
+
+  g.save();
+  g.translate(cx,y);
+  g.scale(scale,scale);
+  const bw=w/scale,bh=h/scale;
+  const left=-bw/2;
+
+  g.fillStyle="#111";
+  g.fillRect(left+4,6,bw-8,bh);
+
+  if(c.type==="formula"){
+    g.fillStyle=c.color;
+    g.fillRect(-13,5,26,bh-10);
+    g.fillRect(-23,8,46,9);
+    g.fillRect(-30,bh-13,60,7);
+    g.fillRect(-8,0,16,12);
+    g.fillStyle="#303a3a";
+    g.fillRect(-7,17,14,18);
+    g.fillStyle="#111";
+    g.fillRect(-28,14,8,17);
+    g.fillRect(20,14,8,17);
+    g.fillRect(-29,bh-20,9,18);
+    g.fillRect(20,bh-20,9,18);
+  }else if(c.type==="offroad"){
+    g.fillStyle=c.color;
+    g.fillRect(left+5,5,bw-10,bh-10);
+    g.fillStyle="#303a3a";
+    g.fillRect(left+10,18,bw-20,19);
+    g.fillStyle=c.dark;
+    g.fillRect(left+8,40,bw-16,18);
+    g.fillStyle="#111";
+    g.fillRect(left-2,8,9,22);
+    g.fillRect(left+bw-7,8,9,22);
+    g.fillRect(left-2,bh-30,9,22);
+    g.fillRect(left+bw-7,bh-30,9,22);
+  }else if(c.type==="muscle"){
+    g.fillStyle=c.color;
+    g.fillRect(left+2,9,bw-4,bh-12);
+    g.fillRect(left-3,30,bw+6,29);
+    g.fillStyle=c.dark;
+    g.fillRect(left+8,17,bw-16,17);
+    g.fillStyle="#303a3a";
+    g.fillRect(left+8,37,bw-16,14);
+    g.fillStyle="#111";
+    g.fillRect(left-2,12,8,18);
+    g.fillRect(left+bw-6,12,8,18);
+    g.fillRect(left-2,bh-27,8,18);
+    g.fillRect(left+bw-6,bh-27,8,18);
+  }else{
+    g.fillStyle=c.color;
+    g.fillRect(left+5,2,bw-10,bh-4);
+    g.fillStyle="#eee6bd";
+    g.fillRect(left+9,7,bw-18,18);
+    g.fillStyle="#303a3a";
+    g.fillRect(left+9,27,bw-18,17);
+    g.fillStyle=c.dark;
+    g.fillRect(left+9,46,bw-18,16);
+    g.fillStyle="#8b3830";
+    g.fillRect(left+8,55,7,6);
+    g.fillRect(left+bw-15,55,7,6);
+    g.fillStyle="#111";
+    g.fillRect(left-2,10,7,17);
+    g.fillRect(left+bw-5,10,7,17);
+    g.fillRect(left-2,45,7,17);
+    g.fillRect(left+bw-5,45,7,17);
+  }
+  g.restore();
+}
+
+document.querySelectorAll(".mini").forEach(c=>{
+  const g=c.getContext("2d");
+  g.fillStyle="#303030";g.fillRect(0,0,90,90);
+  drawCar(g,c.dataset.preview,45,10,38,70,1);
+});
+
+let score=0,best=Number(localStorage.getItem("microRacingBestV2"))||0;
+let gameOver=false,last=0,roadOffset=0,spawnTimer=0,spawnInterval=.9,obstacles=[];
+const keys={ArrowLeft:false,ArrowRight:false,ArrowUp:false,ArrowDown:false};
+const road={x:75,width:350};
+const player={x:231,y:545,width:38,height:70,speed:250};
+
+function hud(){
+  scoreEl.textContent=score;
+  bestEl.textContent=best;
+  speedLevelEl.textContent=Math.floor(score/50)+1;
+}
+function random(a,b){return Math.random()*(b-a)+a}
+function overlap(a,b){
+  const p=5;
+  return a.x+p<b.x+b.width-p&&a.x+a.width-p>b.x+p&&a.y+p<b.y+b.height-p&&a.y+a.height-p>b.y+p;
+}
+function spawn(){
+  const w=random(34,52),h=random(45,70);
+  obstacles.push({
+    x:random(road.x+15,road.x+road.width-w-15),y:-h-20,width:w,height:h,
+    speed:random(40,110),passed:false,type:Math.random()>.5?"barrier":"rock"
+  });
+}
+function reset(){
+  score=0;gameOver=false;player.x=W/2-player.width/2;player.speed=250;
+  obstacles=[];spawnTimer=0;spawnInterval=.9;roadOffset=0;hud();
+}
+function start(){
+  menu.classList.add("hidden");gameScreen.classList.remove("hidden");
+  carLabelEl.textContent=cars[selected].name;reset();last=performance.now();
+}
+startBtn.addEventListener("click",start);
+
+function backToMenu(){
+  gameScreen.classList.add("hidden");menu.classList.remove("hidden");
+  gameOver=false;
+}
+
+window.addEventListener("keydown",e=>{
+  if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"," ","Enter"].includes(e.key))e.preventDefault();
+
+  // Car selection screen: Left/Right selects a car, Enter starts.
+  if(!menu.classList.contains("hidden")){
+    if(e.key==="ArrowLeft"){moveCarSelection(-1);return}
+    if(e.key==="ArrowRight"){moveCarSelection(1);return}
+    if(e.key==="Enter"){start();return}
+  }
+
+  if(e.key==="Escape"&&!gameScreen.classList.contains("hidden")){backToMenu();return}
+  if(e.key===" "&&gameOver){reset();return}
+  if(e.key in keys)keys[e.key]=true;
+});
+window.addEventListener("keyup",e=>{if(e.key in keys)keys[e.key]=false});
+
+function update(dt){
+  if(gameOver)return;
+  let steer=(keys.ArrowRight?1:0)-(keys.ArrowLeft?1:0);
+  player.x+=steer*300*dt;
+  if(keys.ArrowUp)player.speed+=180*dt;
+  else if(keys.ArrowDown)player.speed-=220*dt;
+  else if(player.speed>250)player.speed-=70*dt;
+  else if(player.speed<250)player.speed+=35*dt;
+  player.speed=Math.max(170,Math.min(430,player.speed));
+  player.x=Math.max(road.x+7,Math.min(road.x+road.width-player.width-7,player.x));
+  roadOffset+=player.speed*dt;
+  spawnTimer+=dt;
+  if(spawnTimer>=spawnInterval){
+    spawnTimer=0;spawn();
+    const speedLevel = Math.floor(score / 50);
+    spawnInterval = Math.max(0.20, 0.90 - speedLevel * 0.75);
+  }
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o=obstacles[i];
+    const speedLevel = Math.floor(score / 50);
+    o.y += (player.speed + o.speed + speedLevel * 35) * dt;
+    if(overlap(player,o)){gameOver=true;if(score>best){best=score;localStorage.setItem("microRacingBestV2",best)}hud();return}
+    if(!o.passed&&o.y>player.y+player.height){o.passed=true;score++;if(score>best)best=score;hud()}
+    if(o.y>H+100)obstacles.splice(i,1);
+  }
+}
+
+function drawBackground(){
+  ctx.fillStyle="#53634b";ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#5d6d55";
+  for(let y=-20;y<H;y+=32){
+    const o=Math.floor((roadOffset*.35)%32);
+    ctx.fillRect(10,y+o,5,2);ctx.fillRect(38,y+o+13,4,2);
+    ctx.fillRect(450,y+o+7,5,2);ctx.fillRect(475,y+o+20,4,2);
+  }
+  ctx.fillStyle="#303030";ctx.fillRect(road.x,0,road.width,H);
+  ctx.fillStyle="#d0c48f";ctx.fillRect(road.x,0,5,H);ctx.fillRect(road.x+road.width-5,0,5,H);
+  ctx.fillStyle="#454545";ctx.fillRect(road.x+5,0,5,H);ctx.fillRect(road.x+road.width-10,0,5,H);
+  ctx.fillStyle="#cfc18b";
+  const cycle=62,o=roadOffset%cycle;
+  for(let y=-cycle+o;y<H;y+=cycle)ctx.fillRect(W/2-3,y,6,32);
+}
+function drawObstacle(o){
+  const x=o.x,y=o.y,w=o.width,h=o.height;
+  ctx.fillStyle="#191919";ctx.fillRect(x+4,y+5,w,h);
+  if(o.type==="barrier"){
+    ctx.fillStyle="#b9ad7c";ctx.fillRect(x,y,w,h);
+    ctx.strokeStyle="#181818";ctx.lineWidth=3;ctx.strokeRect(x,y,w,h);
+    ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+    ctx.fillStyle="#454545";
+    for(let i=-h;i<w+h;i+=18){
+      ctx.save();ctx.translate(x+i,y);ctx.rotate(-.65);ctx.fillRect(0,0,7,h*1.6);ctx.restore();
+    }
+    ctx.restore();
+    ctx.fillStyle="#e8dfb7";ctx.fillRect(x+5,y+7,6,6);ctx.fillRect(x+w-11,y+7,6,6);
+  }else{
+    ctx.fillStyle="#726d61";ctx.beginPath();
+    ctx.moveTo(x+w*.2,y);ctx.lineTo(x+w*.78,y+2);ctx.lineTo(x+w,y+h*.55);
+    ctx.lineTo(x+w*.72,y+h);ctx.lineTo(x+w*.15,y+h*.88);ctx.lineTo(x,y+h*.35);
+    ctx.closePath();ctx.fill();
+    ctx.strokeStyle="#171717";ctx.lineWidth=3;ctx.stroke();
+    ctx.fillStyle="#8b8577";ctx.fillRect(x+w*.28,y+h*.22,w*.25,5);
+  }
+}
+function drawGameOver(){
+  ctx.fillStyle="rgba(10,10,10,.78)";ctx.fillRect(0,0,W,H);
+  const pw=340,ph=220,px=(W-pw)/2,py=(H-ph)/2;
+  ctx.fillStyle="#222";ctx.fillRect(px,py,pw,ph);
+  ctx.strokeStyle="#d6c79a";ctx.lineWidth=4;ctx.strokeRect(px,py,pw,ph);
+  ctx.textAlign="center";ctx.fillStyle="#eee6bd";ctx.font="bold 32px Courier New";
+  ctx.fillText("GAME OVER",W/2,py+53);
+  ctx.font="17px Courier New";ctx.fillStyle="#c9bd91";
+  ctx.fillText("CAR: "+cars[selected].name,W/2,py+87);
+  ctx.fillText("SCORE: "+score+"   BEST: "+best,W/2,py+116);
+  ctx.fillText("SPEED LEVEL: "+(Math.floor(score/50)+1),W/2,py+140);
+  ctx.font="14px Courier New";ctx.fillStyle="#eee6bd";
+  ctx.fillText("SPACE = RESTART",W/2,py+164);
+  ctx.fillText("ESC = CAR SELECT",W/2,py+188);
+  ctx.textAlign="start";
+}
+function draw(){
+  drawBackground();
+  obstacles.forEach(drawObstacle);
+  drawCar(ctx,selected,player.x,player.y,player.width,player.height,1);
+  if(gameOver)drawGameOver();
+}
+function loop(t){
+  if(!last)last=t;
+  const dt=Math.min((t-last)/1000,.05);last=t;
+  if(!gameScreen.classList.contains("hidden")){update(dt);draw()}
+  requestAnimationFrame(loop);
+}
+hud();
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

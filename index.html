@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Micro Racing V2.0</title>
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <h1>MICRO RACING</h1>
+    <div class="version">V2.3 — SINGLE CAR SELECT</div>
+
+    <!-- 車輛選擇主選單 -->
+    <section id="menu" class="panel">
+      <div class="tip">SELECT YOUR CAR — ← / → CHANGE &nbsp; ENTER START</div>
+      <div class="car-grid">
+        <div class="car-card selected" data-car="sport">
+          <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="sport"></canvas></div>
+          <div class="car-name">閃電 GT</div>
+          <div class="car-desc">BALANCED</div>
+        </div>
+        <div class="car-card" data-car="formula">
+          <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="formula"></canvas></div>
+          <div class="car-name">獵鷹 F1</div>
+          <div class="car-desc">SLIM & FAST</div>
+        </div>
+        <div class="car-card" data-car="offroad">
+          <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="offroad"></canvas></div>
+          <div class="car-name">荒野王者</div>
+          <div class="car-desc">TOUGH</div>
+        </div>
+        <div class="car-card" data-car="muscle">
+          <div class="car-preview"><canvas class="mini" width="90" height="90" data-preview="muscle"></canvas></div>
+          <div class="car-name">赤焰 V8</div>
+          <div class="car-desc">WIDE & POWER</div>
+        </div>
+      </div>
+      <button id="startBtn">▶ START RACE</button>
+    </section>
+
+    <!-- 遊戲賽道與儀表板畫面 -->
+    <section id="gameScreen" class="hidden">
+      <div class="hud">
+        <div>SCORE: <span id="score">0</span></div>
+        <div>BEST: <span id="best">0</span></div>
+        <div>CAR: <span id="carLabel">閃電 GT</span></div>
+        <div>LV: <span id="speedLevel">1</span></div>
+      </div>
+      <canvas id="game" width="500" height="650"></canvas>
+      <div class="controls">
+        <kbd>←</kbd> <kbd>→</kbd> 移動　／　<kbd>↑</kbd> 加速　／　<kbd>↓</kbd> 減速
+        <br>撞擊後按 <kbd>SPACE</kbd> 重新開始　／　按 <kbd>ESC</kbd> 回選車
+      </div>
+    </section>
+  </div>
+
+  <!-- 引入 ES6 模組入口 -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
