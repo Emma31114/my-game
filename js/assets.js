@@ -73,6 +73,9 @@ export function getImage(key) {
 //  Web Audio API 音訊系統
 // ═══════════════════════════════════════════
 
+export const DEFAULT_BGM_VOLUME = 0.40;
+export const DEFAULT_SFX_VOLUME = 0.20; // SFX 音量為 BGM 的一半（比 BGM 小一倍）
+
 /**
  * 初始化 AudioContext（需在使用者互動後呼叫）
  */
@@ -85,14 +88,14 @@ function initAudioContext() {
   masterGain.gain.value = 1.0;
   masterGain.connect(audioCtx.destination);
 
-  // SFX 音量節點
+  // SFX 音量節點（設為 BGM 的一半）
   sfxGain = audioCtx.createGain();
-  sfxGain.gain.value = 0.7;
+  sfxGain.gain.value = DEFAULT_SFX_VOLUME;
   sfxGain.connect(masterGain);
 
   // BGM 音量節點（透過 MediaElementSource）
   bgmGain = audioCtx.createGain();
-  bgmGain.gain.value = 0.35;
+  bgmGain.gain.value = DEFAULT_BGM_VOLUME;
   bgmGain.connect(masterGain);
 }
 
@@ -156,7 +159,7 @@ export function stopBGM() {
 export function toggleBGM() {
   bgmMuted = !bgmMuted;
   if (bgmGain) {
-    bgmGain.gain.value = bgmMuted ? 0 : 0.35;
+    bgmGain.gain.value = bgmMuted ? 0 : DEFAULT_BGM_VOLUME;
   }
   return bgmMuted;
 }
@@ -168,7 +171,7 @@ export function toggleBGM() {
 export function toggleSFX() {
   sfxMuted = !sfxMuted;
   if (sfxGain) {
-    sfxGain.gain.value = sfxMuted ? 0 : 0.7;
+    sfxGain.gain.value = sfxMuted ? 0 : DEFAULT_SFX_VOLUME;
   }
   return sfxMuted;
 }
@@ -217,7 +220,7 @@ export function unlockAudio() {
     bgmSource.connect(bgmGain);
   } catch (e) {
     // fallback：直接使用 Audio 元素音量控制
-    bgmElement.volume = 0.35;
+    bgmElement.volume = DEFAULT_BGM_VOLUME;
   }
 
   // Resume AudioContext
