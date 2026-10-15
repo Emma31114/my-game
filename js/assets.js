@@ -74,7 +74,7 @@ export function getImage(key) {
 // ═══════════════════════════════════════════
 
 export const DEFAULT_BGM_VOLUME = 0.40;
-export const DEFAULT_SFX_VOLUME = 0.20; // SFX 音量為 BGM 的一半（比 BGM 小一倍）
+export const DEFAULT_SFX_VOLUME = Number((DEFAULT_BGM_VOLUME * 0.2).toFixed(4)); // 0.08，SFX 的聲音是 BGM 的 0.2 倍
 
 /**
  * 初始化 AudioContext（需在使用者互動後呼叫）
@@ -88,7 +88,7 @@ function initAudioContext() {
   masterGain.gain.value = 1.0;
   masterGain.connect(audioCtx.destination);
 
-  // SFX 音量節點（設為 BGM 的一半）
+  // SFX 音量節點（設為 BGM 的 0.2 倍）
   sfxGain = audioCtx.createGain();
   sfxGain.gain.value = DEFAULT_SFX_VOLUME;
   sfxGain.connect(masterGain);
