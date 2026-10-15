@@ -1,9 +1,13 @@
 /**
- * 遊戲主循環、狀態控制與場景繪製
+ * 遊戲主循環、狀態控制、音訊觸發與場景繪製
+ * - 使用 assets/images/background.png 實現滾動平鋪賽道背景
+ * - 整合 Web Audio API 播放 BGM 及操作/得分/升級/碰撞 SFX
+ * - 畫面左下角清楚標註：「製作人：11374錞」
  */
 import { CANVAS_WIDTH, CANVAS_HEIGHT, ROAD, CARS, GAME_CONFIG } from "./config.js";
 import { Player } from "./player.js";
 import { ObstacleManager } from "./enemy.js";
+import { getImage, playSfx, startBGM, stopBGM } from "./assets.js";
 
 export class Game {
   constructor() {
@@ -31,6 +35,7 @@ export class Game {
     this.gameOver = false;
     this.lastTime = 0;
     this.roadOffset = 0;
+    this.lastBoostSfxTime = 0;
 
     // 按鍵狀態監聽
     this.keys = {
@@ -90,12 +95,17 @@ export class Game {
     this.score = 0;
     this.gameOver = false;
     this.roadOffset = 0;
+    this.lastBoostSfxTime = 0;
     this.player.reset(this.selectedCar);
     this.obstacleManager.reset();
     for (const k in this.keys) {
       this.keys[k] = false;
     }
     this.updateHUD();
+
+    // 重新啟動 BGM 與出發語音
+    startBGM();
+    playSfx("go");
   }
 
   /**
@@ -115,6 +125,7 @@ export class Game {
    * 返回車輛選擇選單
    */
   backToMenu() {
+    stopBGM();
     this.gameScreen.classList.add("hidden");
     this.menu.classList.remove("hidden");
     this.gameOver = false;
@@ -124,44 +135,53 @@ export class Game {
   }
 
   /**
-   * 繪製滾動賽道與路肩草地
+   * 繪製滾動賽道背景
+   * 優先使用 assets/images/background.png 平鋪垂直循環滾動
    */
   drawBackground() {
     const W = CANVAS_WIDTH;
     const H = CANVAS_HEIGHT;
+    const bgImage = getImage("background");
 
-    // 兩側草地
-    this.ctx.fillStyle = "#53634b";
-    this.ctx.fillRect(0, 0, W, H);
-    this.ctx.fillStyle = "#5d6d55";
-    for (let y = -20; y < H; y += 32) {
-      const o = Math.floor((this.roadOffset * 0.35) % 32);
-      this.ctx.fillRect(10, y + o, 5, 2);
-      this.ctx.fillRect(38, y + o + 13, 4, 2);
-      this.ctx.fillRect(450, y + o + 7, 5, 2);
-      this.ctx.fillRect(475, y + o + 20, 4, 2);
+    if (bgImage) {
+      // 垂直平鋪連續滾動
+      const offset = Math.floor(this.roadOffset % H);
+      this.ctx.drawImage(bgImage, 0, offset);
+      this.ctx.drawImage(bgImage, 0, offset - H);
+    } else {
+      // 圖片未加載前之回退繪製
+      this.ctx.fillStyle = "#53634b";
+      this.ctx.fillRect(0, 0, W, H);
+      this.ctx.fillStyle = "#303030";
+      this.ctx.fillRect(ROAD.x, 0, ROAD.width, H);
+      this.ctx.fillStyle = "#d0c48f";
+      this.ctx.fillRect(ROAD.x, 0, 5, H);
+      this.ctx.fillRect(ROAD.x + ROAD.width - 5, 0, 5, H);
+      this.ctx.fillStyle = "#cfc18b";
+      const cycle = 62;
+      const o = this.roadOffset % cycle;
+      for (let y = -cycle + o; y < H; y += cycle) {
+        this.ctx.fillRect(W / 2 - 3, y, 6, 32);
+      }
     }
+  }
 
-    // 柏油路面
-    this.ctx.fillStyle = "#303030";
-    this.ctx.fillRect(ROAD.x, 0, ROAD.width, H);
-
-    // 兩側邊線
-    this.ctx.fillStyle = "#d0c48f";
-    this.ctx.fillRect(ROAD.x, 0, 5, H);
-    this.ctx.fillRect(ROAD.x + ROAD.width - 5, 0, 5, H);
-
-    this.ctx.fillStyle = "#454545";
-    this.ctx.fillRect(ROAD.x + 5, 0, 5, H);
-    this.ctx.fillRect(ROAD.x + ROAD.width - 10, 0, 5, H);
-
-    // 中央虛線
-    this.ctx.fillStyle = "#cfc18b";
-    const cycle = 62;
-    const o = this.roadOffset % cycle;
-    for (let y = -cycle + o; y < H; y += cycle) {
-      this.ctx.fillRect(W / 2 - 3, y, 6, 32);
-    }
+  /**
+   * 繪製畫面角落的製作人水印標註
+   */
+  drawProducerWatermark() {
+    this.ctx.save();
+    this.ctx.font = "bold 12px 'Courier New', monospace";
+    this.ctx.fillStyle = "rgba(23, 23, 23, 0.78)";
+    this.ctx.fillRect(8, CANVAS_HEIGHT - 26, 140, 20);
+    this.ctx.strokeStyle = "#d6c79a";
+    this.ctx.lineWidth = 1;
+    this.ctx.strokeRect(8, CANVAS_HEIGHT - 26, 140, 20);
+    this.ctx.fillStyle = "#f2e8c9";
+    this.ctx.textAlign = "left";
+    this.ctx.textBaseline = "middle";
+    this.ctx.fillText("製作人：11374錞", 14, CANVAS_HEIGHT - 16);
+    this.ctx.restore();
   }
 
   /**
@@ -216,6 +236,15 @@ export class Game {
     // 賽道滾動
     this.roadOffset += this.player.speed * dt;
 
+    // 按住加速鍵時觸發 boost 音效（每 1.2 秒限流觸發一次）
+    if (this.keys.ArrowUp) {
+      const now = performance.now();
+      if (now - this.lastBoostSfxTime > 1200) {
+        this.lastBoostSfxTime = now;
+        playSfx("boost");
+      }
+    }
+
     // 障礙物推進與碰撞判定
     this.obstacleManager.update(
       dt,
@@ -223,21 +252,41 @@ export class Game {
       this.score,
       () => {
         // 超車得分回調
+        const prevLevel = Math.floor(this.score / GAME_CONFIG.scorePerLevel);
         this.score++;
+        const currLevel = Math.floor(this.score / GAME_CONFIG.scorePerLevel);
+
+        if (currLevel > prevLevel) {
+          playSfx("levelUp");
+        } else {
+          playSfx("score");
+        }
+
         if (this.score > this.best) {
           this.best = this.score;
         }
         this.updateHUD();
       },
       () => {
-        // 發生碰撞回調
+        // 發生碰撞回調（GameOver）
         this.gameOver = true;
-        if (this.score > this.best) {
+        stopBGM();
+        playSfx("crash");
+
+        setTimeout(() => {
+          playSfx("gameOver");
+        }, 350);
+
+        const isNewRecord = this.score > this.best;
+        if (isNewRecord) {
           this.best = this.score;
+          setTimeout(() => {
+            playSfx("newHighscore");
+          }, 850);
           try {
             localStorage.setItem(GAME_CONFIG.storageKey, this.best.toString());
           } catch (e) {
-            // 忽略 localStorage 權限限制
+            // 忽略 localStorage 限制
           }
         }
         this.updateHUD();
@@ -252,6 +301,7 @@ export class Game {
     this.drawBackground();
     this.obstacleManager.draw(this.ctx);
     this.player.draw(this.ctx);
+    this.drawProducerWatermark();
     if (this.gameOver) {
       this.drawGameOver();
     }

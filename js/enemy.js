@@ -1,7 +1,11 @@
 /**
  * 障礙物與敵對物件生成、更新、碰撞檢測與繪製邏輯
+ * - 支援多種類型障礙物：施工護欄 (barrier)、落石 (rock) 與敵方賽車 (car)
+ * - 敵方賽車以精靈圖 drawImage 渲染
+ * - 嚴格維持原有碰撞箱與物理判定
  */
 import { CANVAS_HEIGHT, ROAD, PLAYER_CONFIG, GAME_CONFIG } from "./config.js";
+import { drawEnemyCarSprite } from "./player.js";
 
 /**
  * 區間隨機數
@@ -30,7 +34,7 @@ export function checkCollision(a, b, p = PLAYER_CONFIG.collisionPadding) {
 }
 
 /**
- * 繪製障礙物
+ * 繪製障礙物或敵車
  * @param {CanvasRenderingContext2D} ctx
  * @param {Object} o - 障礙物資料
  */
@@ -44,7 +48,11 @@ export function drawObstacle(ctx, o) {
   ctx.fillStyle = "#191919";
   ctx.fillRect(x + 4, y + 5, w, h);
 
-  if (o.type === "barrier") {
+  if (o.type === "car") {
+    // 敵方賽車：使用精靈圖第 2 列繪製
+    const frame = Math.floor(Date.now() / 120) % 4;
+    drawEnemyCarSprite(ctx, x, y, w, h, frame);
+  } else if (o.type === "barrier") {
     // 施工護欄 / 斑馬條紋路障
     ctx.fillStyle = "#b9ad7c";
     ctx.fillRect(x, y, w, h);
@@ -111,11 +119,15 @@ export class ObstacleManager {
   }
 
   /**
-   * 隨機產生一個新障礙物
+   * 隨機產生一個新障礙物或敵車
    */
   spawn() {
-    const w = random(34, 52);
-    const h = random(45, 70);
+    const w = random(34, 48);
+    const h = random(55, 70);
+    const rand = Math.random();
+    // 隨機生成護欄、岩石或敵車
+    const type = rand < 0.35 ? "barrier" : (rand < 0.7 ? "rock" : "car");
+
     this.obstacles.push({
       x: random(ROAD.x + 15, ROAD.x + ROAD.width - w - 15),
       y: -h - 20,
@@ -123,7 +135,7 @@ export class ObstacleManager {
       height: h,
       speed: random(40, 110),
       passed: false,
-      type: Math.random() > 0.5 ? "barrier" : "rock"
+      type: type
     });
   }
 

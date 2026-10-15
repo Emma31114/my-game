@@ -14,3 +14,8 @@ $RECYCLE.BIN/
 *.log
 *.tmp
 *.bak
+
+# Raw asset packs & authoring source files
+kenney_car-kit/
+kenney_voiceover-pack/
+*.bfxr

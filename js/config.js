@@ -71,3 +71,23 @@ export const GAME_CONFIG = {
   scorePerLevel: 50,
   speedBoostPerLevel: 35
 };
+
+// 精靈圖切割設定（player.png 256×240，4 欄 × 3 列）
+export const SPRITE_CONFIG = {
+  frameWidth: 64,    // 每幀寬度
+  frameHeight: 80,   // 每幀高度
+  cols: 4,           // 欄數
+  rows: 3,           // 列數
+  // 車種 → 精靈圖列映射（Row 0 = 紅車待機, Row 1 = 紅車動態, Row 2 = 藍車/敵車）
+  carRowMap: {
+    sport: 0,        // 閃電 GT → 第 0 列（待機幀 Row）
+    formula: 0,      // 獵鷹 F1 → 第 0 列
+    offroad: 1,      // 荒野王者 → 第 1 列（動態幀 Row）
+    muscle: 1         // 赤焰 V8 → 第 1 列
+  },
+  enemyRow: 2,       // 敵車/障礙車使用的列
+  idleFrames: [0, 1],            // 待機動畫幀（欄索引）
+  runFrames: [0, 1, 2, 3],       // 移動動畫幀
+  boostFrames: [2, 3],           // 加速特效幀
+  animSpeed: 8                   // 動畫播放速度（幀/秒）
+};

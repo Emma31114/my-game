@@ -16,18 +16,69 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+}
+
+/* 畫面右上角音訊控制列 */
+.audio-bar {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  display: flex;
+  gap: 8px;
+  z-index: 1000;
+}
+
+.audio-btn {
+  font: 700 12px "Courier New", monospace;
+  color: #f2e8c9;
+  background: #242424;
+  border: 2px solid #d6c79a;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+}
+
+.audio-btn:hover {
+  background: #383838;
+  border-color: #fff;
+}
+
+.audio-btn.muted {
+  color: #888;
+  border-color: #666;
+  background: #1a1a1a;
+  opacity: 0.8;
 }
 
 .wrap {
   width: 540px;
   max-width: 96vw;
   text-align: center;
+  position: relative;
+}
+
+.header-row {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 h1 {
   margin: 0 0 4px;
   font-size: 28px;
   letter-spacing: 5px;
+}
+
+.producer-tag {
+  font-size: 13px;
+  color: #d6c79a;
+  font-weight: 700;
+  letter-spacing: 1px;
 }
 
 .version {
@@ -40,6 +91,13 @@ h1 {
   border: 3px solid #d6c79a;
   background: #242424;
   padding: 16px;
+}
+
+.canvas-container {
+  position: relative;
+  width: 500px;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
 canvas {

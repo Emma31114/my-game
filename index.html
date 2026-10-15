@@ -7,9 +7,18 @@
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
+  <!-- 右上角音效與音樂靜音切換按鈕 -->
+  <div class="audio-bar">
+    <button id="bgmToggleBtn" class="audio-btn" type="button" title="切換背景音樂 (BGM)">🎵 BGM: ON</button>
+    <button id="sfxToggleBtn" class="audio-btn" type="button" title="切換遊戲音效 (SFX)">🔊 SFX: ON</button>
+  </div>
+
   <div class="wrap">
-    <h1>MICRO RACING</h1>
-    <div class="version">V2.3 — SINGLE CAR SELECT</div>
+    <div class="header-row">
+      <h1>MICRO RACING</h1>
+      <div class="producer-tag">製作人：11374錞</div>
+    </div>
+    <div class="version">V2.4 — SPRITE & AUDIO EDITION</div>
 
     <!-- 車輛選擇主選單 -->
     <section id="menu" class="panel">
@@ -47,7 +56,9 @@
         <div>CAR: <span id="carLabel">閃電 GT</span></div>
         <div>LV: <span id="speedLevel">1</span></div>
       </div>
-      <canvas id="game" width="500" height="650"></canvas>
+      <div class="canvas-container">
+        <canvas id="game" width="500" height="650"></canvas>
+      </div>
       <div class="controls">
         <kbd>←</kbd> <kbd>→</kbd> 移動　／　<kbd>↑</kbd> 加速　／　<kbd>↓</kbd> 減速
         <br>撞擊後按 <kbd>SPACE</kbd> 重新開始　／　按 <kbd>ESC</kbd> 回選車
